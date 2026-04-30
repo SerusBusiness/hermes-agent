@@ -138,7 +138,9 @@ export interface ComposerActions {
   enqueue: (text: string) => void
   handleTextPaste: (event: PasteEvent) => MaybePromise<ComposerPasteResult | null>
   openEditor: () => Promise<void>
+  popStash: () => string
   pushHistory: (text: string) => void
+  pushStash: (text: string) => boolean
   removeQueue: (index: number) => void
   replaceQueue: (index: number, text: string) => void
   setCompIdx: StateSetter<number>
@@ -168,6 +170,7 @@ export interface ComposerState {
   pasteSnips: PasteSnippet[]
   queueEditIdx: null | number
   queuedDisplay: string[]
+  stashCount: number
 }
 
 export interface UseComposerStateOptions {
@@ -260,6 +263,8 @@ export interface SlashHandlerContext {
     enqueue: (text: string) => void
     hasSelection: boolean
     paste: (quiet?: boolean) => void
+    popStash: () => string
+    pushStash: (text: string) => boolean
     queueRef: MutableRefObject<string[]>
     selection: SelectionApi
     setInput: StateSetter<string>
@@ -316,6 +321,7 @@ export interface AppLayoutComposerProps {
   pagerPageSize: number
   queueEditIdx: null | number
   queuedDisplay: string[]
+  stashCount: number
   submit: (value: string) => void
   updateInput: StateSetter<string>
 }

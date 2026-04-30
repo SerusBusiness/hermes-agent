@@ -381,18 +381,40 @@ export function TextInput({
   }, [cur, display, focus, nativeCursor, placeholder, selected])
 
   useEffect(() => {
-    if (self.current) {
+    // If a local edit just propagated and the parent is echoing it back,
+    // skip the resync (that's the common case — the user typed a char and
+    // React re-rendered with the matching parent value). We detect this by
+    // either matching our local buffer OR matching the value we most
+    // recently scheduled for the parent.
+    const echoing =
+      self.current && (value === vRef.current || value === pendingParentValue.current)
+
+    if (echoing) {
       self.current = false
-    } else {
-      setCur(value.length)
-      setSel(null)
-      curRef.current = value.length
-      selRef.current = null
-      vRef.current = value
-      lineWidthRef.current = stringWidth(value.includes('\n') ? value.slice(value.lastIndexOf('\n') + 1) : value)
-      undo.current = []
-      redo.current = []
+
+      return
     }
+
+    // Parent asserted an authoritative value (e.g. clearIn(), setInput
+    // from a slash command, pop-from-stash). Drop any in-flight local
+    // change and fully resync — otherwise a pending flushParentChange
+    // timer would race and restore the old draft on the next render.
+    if (parentChangeTimer.current) {
+      clearTimeout(parentChangeTimer.current)
+      parentChangeTimer.current = null
+    }
+
+    pendingParentValue.current = null
+    self.current = false
+
+    setCur(value.length)
+    setSel(null)
+    curRef.current = value.length
+    selRef.current = null
+    vRef.current = value
+    lineWidthRef.current = stringWidth(value.includes('\n') ? value.slice(value.lastIndexOf('\n') + 1) : value)
+    undo.current = []
+    redo.current = []
   }, [value])
 
   useEffect(() => {

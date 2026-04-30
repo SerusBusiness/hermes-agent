@@ -610,6 +610,8 @@ export function useMainApp(gw: GatewayClient) {
           enqueue: composerActions.enqueue,
           hasSelection,
           paste,
+          popStash: composerActions.popStash,
+          pushStash: composerActions.pushStash,
           queueRef: composerRefs.queueRef,
           selection,
           setInput: composerActions.setInput
@@ -771,6 +773,7 @@ export function useMainApp(gw: GatewayClient) {
       pagerPageSize,
       queueEditIdx: composerState.queueEditIdx,
       queuedDisplay: composerState.queuedDisplay,
+      stashCount: composerState.stashCount,
       submit,
       updateInput: composerActions.setInput
     }),

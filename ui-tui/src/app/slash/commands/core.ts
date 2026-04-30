@@ -562,5 +562,36 @@ export const coreCommands: SlashCommand[] = [
         })
       )
     }
+  },
+
+  {
+    help: 'stash a message (with no arg, stashes current composer text)',
+    name: 'stash',
+    run: (arg, ctx) => {
+      // If an arg is provided, stash it directly.
+      // Reading current input from slash context requires plumbing that
+      // would bloat the handler interface; just document the shortcut.
+      if (arg) {
+        ctx.composer.pushStash(arg)
+        return ctx.transcript.sys('stashed')
+      }
+
+      ctx.transcript.sys('usage: /stash \u003Ctext\u003E  or press Ctrl+S / Cmd+S in the composer')
+    }
+  },
+
+  {
+    help: 'pop a stashed draft into the composer',
+    name: 'pop',
+    run: (_arg, ctx) => {
+      const popped = ctx.composer.popStash()
+
+      if (!popped) {
+        return ctx.transcript.sys('stash empty')
+      }
+
+      ctx.composer.setInput(popped)
+      ctx.transcript.sys('popped from stash')
+    }
   }
 ]
