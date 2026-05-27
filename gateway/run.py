@@ -10248,12 +10248,16 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if getattr(session_entry, "is_fresh_reset", False):
             session_entry.is_fresh_reset = False
         if _is_new_session:
-            await self.hooks.emit("session:start", {
+            _session_start_results = await self.hooks.emit_collect("session:start", {
                 "platform": source.platform.value if source.platform else "",
                 "user_id": source.user_id,
                 "session_id": session_entry.session_id,
                 "session_key": session_key,
             })
+            # Inject hook-returned context hints (e.g. previous session summary)
+            _session_start_hints = [r for r in _session_start_results if isinstance(r, str) and r.strip()]
+            if _session_start_hints:
+                _session_start_context = "\n\n".join(_session_start_hints)
         
         # Build session context
         context = build_session_context(source, self.config, session_entry)
@@ -10273,7 +10277,15 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
         # Build the context prompt to inject
         context_prompt = build_session_context_prompt(context, redact_pii=_redact_pii)
-        
+
+        # Inject session:start hook context hints (e.g. previous session summary)
+        if _is_new_session and '_session_start_context' in dir():
+            try:
+                if _session_start_context and _session_start_context.strip():
+                    context_prompt = _session_start_context + "\n\n" + context_prompt
+            except NameError:
+                pass
+
         # If the previous session expired and was auto-reset, prepend a notice
         # so the agent knows this is a fresh conversation (not an intentional /reset).
         if _was_auto_reset:
@@ -16677,6 +16689,10 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                     "iteration": iteration,
                     "tool_names": _names,
                     "tools": prev_tools,
+                    # Enriched tool context for hook handlers (tool-guard, learning)
+                    "tool_name": _names[-1] if _names else "",
+                    "tool_input": (prev_tools[-1].get("input", prev_tools[-1].get("args", {}))
+                                   if prev_tools and isinstance(prev_tools[-1], dict) else {}),
                 }),
                 _loop_for_step,
                 logger=logger,
