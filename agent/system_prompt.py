@@ -184,6 +184,10 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     if getattr(agent, "_parallel_tool_call_guidance", True) and agent.valid_tool_names:
         stable_parts.append(PARALLEL_TOOL_CALL_GUIDANCE)
 
+    # Formatting guardrails — unconditional, applies to all models/platforms.
+    from agent.prompt_builder import FORMATTING_GUIDANCE
+    stable_parts.append(FORMATTING_GUIDANCE)
+
     # Tool-aware behavioral guidance: only inject when the tools are loaded
     tool_guidance = []
     if "memory" in agent.valid_tool_names:
@@ -192,6 +196,15 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         tool_guidance.append(SESSION_SEARCH_GUIDANCE)
     if "skill_manage" in agent.valid_tool_names:
         tool_guidance.append(SKILLS_GUIDANCE)
+    # Search-first + copyright + citation — inject when web tools are present
+    _has_web_tools = any(
+        name in agent.valid_tool_names
+        for name in ("web_search", "web_extract")
+    )
+    if _has_web_tools:
+        from agent.prompt_builder import SEARCH_FIRST_GUIDANCE, COPYRIGHT_GUIDANCE
+        tool_guidance.append(SEARCH_FIRST_GUIDANCE)
+        tool_guidance.append(COPYRIGHT_GUIDANCE)
     # Kanban worker/orchestrator lifecycle — only present when the
     # dispatcher spawned this process (kanban_show check_fn gates on
     # HERMES_KANBAN_TASK env var). Normal chat sessions never see
